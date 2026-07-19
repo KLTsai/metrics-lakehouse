@@ -171,4 +171,4 @@
 ## 11. 待決事項
 
 - **Private → Public 轉換時機**：目前 GitHub repo 為 private（kun 明確決定,開發期先不公開）。建議與 T3.5（英文 README + 架構圖整理）綁定,整理好再轉 public；但**週 4 的社群回饋步驟需要 repo 對外可見**,若屆時仍是 private,需改為「邀請特定人當 collaborator」或屆時提前轉 public——**這個決定留到週 4 前再確認,不現在預先決定**。
-- **Windows 側舊資料夾清理**：`C:\Users\d8105\Desktop\Genie-AI\metrics-lakehouse\`（含這份 PLAN.md 的舊副本）內容已確認完整搬進 WSL 並 push 上 GitHub,建議刪除以避免兩邊文件分岔——**待 kun 確認後才刪除,不自動執行**。
+- ~~Windows 側舊資料夾清理~~：**已完成（2026-07-19）**。刪除前已 diff 確認 PLAN.md 與 WSL 版本完全一致、`.git` 為原本 NTFS 設定的殘留、`.claude/settings.json` 已同步進 WSL 版，故安全刪除 `C:\Users\d8105\Desktop\Genie-AI\metrics-lakehouse\`。
