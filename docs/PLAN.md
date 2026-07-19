@@ -1,8 +1,9 @@
 # DE 轉職學習計畫（metrics-lakehouse）
 
 > 狀態：v1 草稿，待 kun 自審
-> 簽核日：2026-07-17（grilling session 共識，12 項決策全數 sign off）；repo 定名 metrics-lakehouse：2026-07-18
+> 簽核日：2026-07-17（grilling session 共識，12 項決策全數 sign off）；repo 定名 metrics-lakehouse：2026-07-18；Phase 0 開發環境建置完成：2026-07-19
 > 本文件為內部工作文件（中文）；公開 repo 的 README 與架構文件為英文，由本文件的定稿內容翻譯產出。
+> **實體位置變更**：本檔案的事實來源已從 Windows 側路徑遷移至 WSL 原生檔案系統 `~/projects/metrics-lakehouse/docs/PLAN.md`（見決策 #13）。Windows 側 `C:\Users\d8105\Desktop\Genie-AI\metrics-lakehouse\` 為建置過程留下的舊副本，待清除（見 §11）。
 
 ---
 
@@ -38,6 +39,7 @@
 | 10 | 證據形式 | 公開 repo：英文 README + 架構圖 + 每 Phase 一篇 ADR（含本計畫的 JD/面經出處，可回查） |
 | 11 | 分工 | 結對協作：kun 站 top-down 決策位；核心產出（DAG、dbt models、star schema、Spark job）必須過 kun 的手、且能複述原理才算完成；環境雜活與英文翻譯由 Claude 扛 |
 | 12 | 刻意不做 | Kafka/streaming、K8s、BigQuery → §9「第 3 個月以後」。皆為真實 JD 需求，但 8 週塞入必然全盤半吊子 |
+| 13 | 開發環境 | **WSL2（Ubuntu 24.04）原生開發**，repo 實體位置在 WSL ext4（`~/projects/metrics-lakehouse`），不放 Windows 側。**Docker Engine 原生安裝（非 Docker Desktop）**：systemd 管理、開機自動啟動，省下 Docker Desktop 的額外背景開銷。依據：bind-mount 到 `/mnt/c` 的 I/O 效能差、inotify 跨界不觸發會拖累 Airflow 熱重載、Linux 本身是台灣 JD 高頻要求（國泰明列）。**GitHub 私有 repo 從第一個 commit 就同步備份**（`github.com/KLTsai/metrics-lakehouse`），直接對應上次原機器全毀、資料/憑證盡失的教訓；開發期維持 private，轉 public 時機見 §11 |
 
 ---
 
@@ -74,8 +76,8 @@
 
 | 任務 | 內容 | 驗證標準 |
 |---|---|---|
-| T0.1 | Docker Desktop 安裝 + `.wslconfig` 設記憶體上限（建議 8GB） | `docker run hello-world` 通過；WSL2 記憶體上限生效 |
-| T0.2 | repo 骨架：git init、目錄結構（`generator/ airflow/ dbt/ spark/ docs/`）、README stub | conventional commits 從第一個 commit 開始 |
+| T0.1 | ~~Docker Desktop 安裝~~ → **WSL2(Ubuntu 24.04) 全新安裝 + `.wslconfig` 設記憶體上限（8GB/6 核心/2GB swap）+ Docker Engine 原生安裝**（見決策 #13） | ✅ 已完成（2026-07-19）：`docker run hello-world` 以一般使用者身分通過；`free -h` 確認 WSL2 記憶體上限生效 |
+| T0.2 | repo 骨架：WSL 原生 fs 內 git init、GitHub private repo 備份、目錄結構（`generator/ airflow/ dbt/ spark/ docs/`）、README stub | ✅ 已完成（2026-07-19）：`~/projects/metrics-lakehouse` 已 git init 並 push 至 `github.com/KLTsai/metrics-lakehouse`（private）；VS Code Remote-WSL 連線確認可用；conventional commits 從第一個 commit 開始 |
 | T0.3 | Postgres via docker compose | 本機 psql 可連線、資料 volume 持久化 |
 | T0.4 | GCP 專案 + Drive API OAuth 憑證 | Python 腳本能列出並下載自有 Drive 檔案 |
 | T0.5 | 髒資料產生器 v1：參考藍本 schema（訂單、應收帳款、客戶），生成多租戶 CSV；髒資料注入可設比例（缺值/重複/格式漂移/遲到） | 指定 5% 髒資料率時，實際輸出可驗證吻合；檔案上傳至 Drive |
@@ -138,7 +140,7 @@
 
 | 風險 | 緩解 |
 |---|---|
-| RAM 16GB 偏緊（實測機器：Ryzen 7 4800U / 16GB / C 槽餘 241GB） | `.wslconfig` 上限、LocalExecutor 輕量 compose、Airflow 與 Databricks 工作負載天然分離（L4 在雲端跑） |
+| RAM 16GB 偏緊（實測機器：Ryzen 7 4800U / 16GB / C 槽餘 241GB） | `.wslconfig` 上限（8GB/6 核心）、LocalExecutor 輕量 compose、Airflow 與 Databricks 工作負載天然分離（L4 在雲端跑）。**實測證據（2026-07-19，WSL/Docker 待機狀態）**：WSL 內僅佔 594MB（上限 8GB 內游刃有餘）；但 Windows 側當下可用記憶體只剩 1.5GB——元凶是同時開著的 Chrome（多分頁，約 2GB+）與 Claude Code 本身（多程序，約 900MB），而非 WSL/Docker。**結論：瓶頸不在設定,在使用習慣**——Phase 1 跑 Airflow+Postgres 前務必關閉非必要分頁,Phase 1 開工後用 `docker stats` 重新量測真實負載 |
 | Databricks FE 運算限制 | 資料量級以「瓶頸現形」為目標而非固定行數；「找到臨界點」比「跑過一億行」更有工程含量 |
 | 進度落後（自學計畫死因第一名：超載） | 砍範圍順序：先砍 Phase 3 深度（保 T3.2 對帳 + 一個瓶頸實驗）→ 再砍 T2.3 遷移張數（30→15）；**Phase 1 完整性不可砍**（Airflow 是台灣 JD 最高頻的編排工具） |
 | 環境挫折（死因第二名） | 雜活歸 Claude；卡關 30 分鐘規則 |
@@ -165,3 +167,8 @@
 **面經證據**：台灣 SQL 筆試前置近 100%（台積電/PChome/FUNNOW/鴻海）；Appier 實錄考 data skew 與 OOM；17LIVE 對履歷上的 Airflow 由難到易深問；外商標配 dimensional modeling（fact/dim、SCD）。
 
 完整連結清單見 grilling session 三份研究報告（保存於本次對話紀錄；正式版將整理為 `docs/research/` 附錄）。
+
+## 11. 待決事項
+
+- **Private → Public 轉換時機**：目前 GitHub repo 為 private（kun 明確決定,開發期先不公開）。建議與 T3.5（英文 README + 架構圖整理）綁定,整理好再轉 public；但**週 4 的社群回饋步驟需要 repo 對外可見**,若屆時仍是 private,需改為「邀請特定人當 collaborator」或屆時提前轉 public——**這個決定留到週 4 前再確認,不現在預先決定**。
+- **Windows 側舊資料夾清理**：`C:\Users\d8105\Desktop\Genie-AI\metrics-lakehouse\`（含這份 PLAN.md 的舊副本）內容已確認完整搬進 WSL 並 push 上 GitHub,建議刪除以避免兩邊文件分岔——**待 kun 確認後才刪除,不自動執行**。
