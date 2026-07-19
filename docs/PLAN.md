@@ -1,7 +1,7 @@
 # DE 轉職學習計畫（metrics-lakehouse）
 
 > 狀態：v1 草稿，待 kun 自審
-> 簽核日：2026-07-17（grilling session 共識，12 項決策全數 sign off）；repo 定名 metrics-lakehouse：2026-07-18；Phase 0 開發環境建置完成：2026-07-19
+> 簽核日：2026-07-17（grilling session 共識，12 項決策全數 sign off）；repo 定名 metrics-lakehouse：2026-07-18；Phase 0 開發環境建置完成：2026-07-19；T0.3 完成：2026-07-19
 > 本文件為內部工作文件（中文）；公開 repo 的 README 與架構文件為英文，由本文件的定稿內容翻譯產出。
 > **實體位置變更**：本檔案的事實來源已從 Windows 側路徑遷移至 WSL 原生檔案系統 `~/projects/metrics-lakehouse/docs/PLAN.md`（見決策 #13）。Windows 側 `C:\Users\d8105\Desktop\Genie-AI\metrics-lakehouse\` 為建置過程留下的舊副本，待清除（見 §11）。
 
@@ -78,7 +78,7 @@
 |---|---|---|
 | T0.1 | ~~Docker Desktop 安裝~~ → **WSL2(Ubuntu 24.04) 全新安裝 + `.wslconfig` 設記憶體上限（8GB/6 核心/2GB swap）+ Docker Engine 原生安裝**（見決策 #13） | ✅ 已完成（2026-07-19）：`docker run hello-world` 以一般使用者身分通過；`free -h` 確認 WSL2 記憶體上限生效 |
 | T0.2 | repo 骨架：WSL 原生 fs 內 git init、GitHub private repo 備份、目錄結構（`generator/ airflow/ dbt/ spark/ docs/`）、README stub | ✅ 已完成（2026-07-19）：`~/projects/metrics-lakehouse` 已 git init 並 push 至 `github.com/KLTsai/metrics-lakehouse`（private）；VS Code Remote-WSL 連線確認可用；conventional commits 從第一個 commit 開始 |
-| T0.3 | Postgres via docker compose | 本機 psql 可連線、資料 volume 持久化 |
+| T0.3 | Postgres via docker compose | ✅ 已完成（2026-07-19）：named volume + healthcheck；本機 `psql -h localhost` 連線通過；持久化以「寫入標記列 → `down` → `up -d` → 查回」驗證，並以 `down -v` 反向實驗對照（volume 被刪、資料蒸發、重跑 initdb），確認 `down` 與 `down -v` 的差異 |
 | T0.4 | GCP 專案 + Drive API OAuth 憑證 | Python 腳本能列出並下載自有 Drive 檔案 |
 | T0.5 | 髒資料產生器 v1：參考藍本 schema（訂單、應收帳款、客戶），生成多租戶 CSV；髒資料注入可設比例（缺值/重複/格式漂移/遲到） | 指定 5% 髒資料率時，實際輸出可驗證吻合；檔案上傳至 Drive |
 | T0.6 | WSL 原生環境內 Node.js/npm + Claude Code CLI 可執行（T0.1/T0.2 建置當時漏列，直到搬遷個人設定才發現 `claude: command not found`） | ✅ 已完成（2026-07-19）：`node -v`/`npm -v`/`claude --version` 皆正常（僅互動 shell 下如此——非互動 shell 因 `~/.bashrc` 開頭的 interactive guard 看不到 nvm，屬正常現象非 bug）；個人 CLAUDE.md/playbooks/6 個本地 skills 已從 Windows 側搬遷；5 個個人 plugin marketplace 全數重新啟用 |
