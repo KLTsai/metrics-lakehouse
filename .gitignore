@@ -1,0 +1,27 @@
+# secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+token.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# airflow
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+logs/
+
+# dbt
+target/
+dbt_packages/
+.user.yml
+
+# os
+.DS_Store
