@@ -81,6 +81,7 @@
 | T0.3 | Postgres via docker compose | 本機 psql 可連線、資料 volume 持久化 |
 | T0.4 | GCP 專案 + Drive API OAuth 憑證 | Python 腳本能列出並下載自有 Drive 檔案 |
 | T0.5 | 髒資料產生器 v1：參考藍本 schema（訂單、應收帳款、客戶），生成多租戶 CSV；髒資料注入可設比例（缺值/重複/格式漂移/遲到） | 指定 5% 髒資料率時，實際輸出可驗證吻合；檔案上傳至 Drive |
+| T0.6 | WSL 原生環境內 Node.js/npm + Claude Code CLI 可執行（T0.1/T0.2 建置當時漏列，直到搬遷個人設定才發現 `claude: command not found`） | ✅ 已完成（2026-07-19）：`node -v`/`npm -v`/`claude --version` 皆正常（僅互動 shell 下如此——非互動 shell 因 `~/.bashrc` 開頭的 interactive guard 看不到 nvm，屬正常現象非 bug）；個人 CLAUDE.md/playbooks/6 個本地 skills 已從 Windows 側搬遷；5 個個人 plugin marketplace 全數重新啟用 |
 
 三個為什麼（示例）：為什麼髒資料要可設比例？為什麼產生器要固定 random seed？為什麼多租戶要分檔而不是合一張表？
 
