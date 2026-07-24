@@ -167,7 +167,7 @@
 
 **面經證據**：台灣 SQL 筆試前置近 100%（台積電/PChome/FUNNOW/鴻海）；Appier 實錄考 data skew 與 OOM；17LIVE 對履歷上的 Airflow 由難到易深問；外商標配 dimensional modeling（fact/dim、SCD）。
 
-完整連結清單見 grilling session 三份研究報告（保存於本次對話紀錄；正式版將整理為 `docs/research/` 附錄）。
+完整連結清單見 grilling session 三份研究報告（`jd-evidence.md` / `portfolio-consensus.md` / `interview-evidence.md`，2026-07-17 產出）。**經評估後決定不納入 repo**（避免 JD 原文與面經細節進入公開版本歷史），研究報告以個人附錄形式離線保存，未隨 codebase 發布。
 
 ## 11. 待決事項
 
