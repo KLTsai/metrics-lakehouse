@@ -4,6 +4,7 @@
 > 簽核日：2026-07-17（grilling session 共識，12 項決策全數 sign off）；repo 定名 metrics-lakehouse：2026-07-18；Phase 0 開發環境建置完成：2026-07-19；T0.3 完成：2026-07-19
 > 本文件為內部工作文件（中文）；公開 repo 的 README 與架構文件為英文，由本文件的定稿內容翻譯產出。
 > **實體位置變更**：本檔案的事實來源已從 Windows 側路徑遷移至 WSL 原生檔案系統 `~/projects/metrics-lakehouse/docs/PLAN.md`（見決策 #13）。Windows 側 `C:\Users\d8105\Desktop\Genie-AI\metrics-lakehouse\` 為建置過程留下的舊副本，待清除（見 §11）。
+> **開發環境二次變更（2026-07-27 確認）**：開發已改為單一 macOS 機器（非 WSL、非兩台並行），決策 #13 同步改寫；T0.1/T0.2 的 WSL2 完成紀錄為當時實況，予以保留。
 
 ---
 
@@ -39,7 +40,7 @@
 | 10 | 證據形式 | 公開 repo：英文 README + 架構圖 + 每 Phase 一篇 ADR（含本計畫的 JD/面經出處，可回查） |
 | 11 | 分工 | 結對協作：kun 站 top-down 決策位；核心產出（DAG、dbt models、star schema、Spark job）必須過 kun 的手、且能複述原理才算完成；環境雜活與英文翻譯由 Claude 扛 |
 | 12 | 刻意不做 | Kafka/streaming、K8s、BigQuery → §9「第 3 個月以後」。皆為真實 JD 需求，但 8 週塞入必然全盤半吊子 |
-| 13 | 開發環境 | **WSL2（Ubuntu 24.04）原生開發**，repo 實體位置在 WSL ext4（`~/projects/metrics-lakehouse`），不放 Windows 側。**Docker Engine 原生安裝（非 Docker Desktop）**：systemd 管理、開機自動啟動，省下 Docker Desktop 的額外背景開銷。依據：bind-mount 到 `/mnt/c` 的 I/O 效能差、inotify 跨界不觸發會拖累 Airflow 熱重載、Linux 本身是台灣 JD 高頻要求（國泰明列）。**GitHub 私有 repo 從第一個 commit 就同步備份**（`github.com/KLTsai/metrics-lakehouse`），直接對應上次原機器全毀、資料/憑證盡失的教訓；開發期維持 private，轉 public 時機見 §11 |
+| 13 | 開發環境 | ~~WSL2（Ubuntu 24.04）原生開發 + Docker Engine 原生安裝（非 Docker Desktop）~~ → **改為 macOS 原生開發**（2026-07-27 確認換機，非兩台並行），repo 實體位置在此機器（`~/projects/metrics-lakehouse`）。容器執行時改用 **Colima**（非 Docker Desktop）：以輕量 Linux VM 提供 Docker daemon，避開 Docker Desktop 的授權與資源開銷。原本 bind-mount 到 `/mnt/c` 效能差、inotify 跨界不觸發兩項理由是 WSL↔Windows 跨界才有的問題，macOS 原生執行不受影響；Linux 環境需求（國泰等 JD 明列）由 Colima 內部的 Linux VM 滿足，不受環境變更影響。**GitHub 私有 repo 從第一個 commit 就同步備份**（`github.com/KLTsai/metrics-lakehouse`），直接對應上次原機器全毀、資料/憑證盡失的教訓；開發期維持 private，轉 public 時機見 §11 |
 
 ---
 
@@ -76,8 +77,8 @@
 
 | 任務 | 內容 | 驗證標準 |
 |---|---|---|
-| T0.1 | ~~Docker Desktop 安裝~~ → **WSL2(Ubuntu 24.04) 全新安裝 + `.wslconfig` 設記憶體上限（8GB/6 核心/2GB swap）+ Docker Engine 原生安裝**（見決策 #13） | ✅ 已完成（2026-07-19）：`docker run hello-world` 以一般使用者身分通過；`free -h` 確認 WSL2 記憶體上限生效 |
-| T0.2 | repo 骨架：WSL 原生 fs 內 git init、GitHub private repo 備份、目錄結構（`generator/ airflow/ dbt/ spark/ docs/`）、README stub | ✅ 已完成（2026-07-19）：`~/projects/metrics-lakehouse` 已 git init 並 push 至 `github.com/KLTsai/metrics-lakehouse`（private）；VS Code Remote-WSL 連線確認可用；conventional commits 從第一個 commit 開始 |
+| T0.1 | ~~Docker Desktop 安裝~~ → **WSL2(Ubuntu 24.04) 全新安裝 + `.wslconfig` 設記憶體上限（8GB/6 核心/2GB swap）+ Docker Engine 原生安裝**（見決策 #13） | ✅ 已完成（2026-07-19）：`docker run hello-world` 以一般使用者身分通過；`free -h` 確認 WSL2 記憶體上限生效。環境已於 2026-07-27 改為 macOS + Colima（決策 #13 已更新），此筆為當時 WSL2 環境下的驗證紀錄 |
+| T0.2 | repo 骨架：WSL 原生 fs 內 git init、GitHub private repo 備份、目錄結構（`generator/ airflow/ dbt/ spark/ docs/`）、README stub | ✅ 已完成（2026-07-19）：`~/projects/metrics-lakehouse` 已 git init 並 push 至 `github.com/KLTsai/metrics-lakehouse`（private）；VS Code Remote-WSL 連線確認可用；conventional commits 從第一個 commit 開始。環境已於 2026-07-27 改為 macOS（決策 #13 已更新），repo 實體位置改在此機器 |
 | T0.3 | Postgres via docker compose | ✅ 已完成（2026-07-19）：named volume + healthcheck；本機 `psql -h localhost` 連線通過；持久化以「寫入標記列 → `down` → `up -d` → 查回」驗證，並以 `down -v` 反向實驗對照（volume 被刪、資料蒸發、重跑 initdb），確認 `down` 與 `down -v` 的差異 |
 | T0.4 | GCP 專案 + Drive API OAuth 憑證 | ✅ 已完成（2026-07-27）：沿用既有 GCP 專案（Console 新版 UI 為 Google Auth Platform，Audience 分頁設定 External + test user）；OAuth client（Desktop app）下載 `credentials.json`；`ingestion/drive_client.py` 四個 TODO 由 kun 填完、我 review 修正（SCOPES 改為單一 `drive.readonly`——原本 `drive.file`+`drive.metadata.readonly` 組合看不到既有檔案且無下載權限；`get_credentials` 清掉授權後多餘的 `raise NotImplementedError`）；`list_files`/`download_file` 皆驗證通過（實際列出並下載 Drive 檔案） |
 | T0.5 | 髒資料產生器 v1：參考藍本 schema（訂單、應收帳款、客戶），生成多租戶 CSV；髒資料注入可設比例（缺值/重複/格式漂移/遲到） | 指定 5% 髒資料率時，實際輸出可驗證吻合；檔案上傳至 Drive |
