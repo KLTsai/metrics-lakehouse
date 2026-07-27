@@ -79,7 +79,7 @@
 | T0.1 | ~~Docker Desktop 安裝~~ → **WSL2(Ubuntu 24.04) 全新安裝 + `.wslconfig` 設記憶體上限（8GB/6 核心/2GB swap）+ Docker Engine 原生安裝**（見決策 #13） | ✅ 已完成（2026-07-19）：`docker run hello-world` 以一般使用者身分通過；`free -h` 確認 WSL2 記憶體上限生效 |
 | T0.2 | repo 骨架：WSL 原生 fs 內 git init、GitHub private repo 備份、目錄結構（`generator/ airflow/ dbt/ spark/ docs/`）、README stub | ✅ 已完成（2026-07-19）：`~/projects/metrics-lakehouse` 已 git init 並 push 至 `github.com/KLTsai/metrics-lakehouse`（private）；VS Code Remote-WSL 連線確認可用；conventional commits 從第一個 commit 開始 |
 | T0.3 | Postgres via docker compose | ✅ 已完成（2026-07-19）：named volume + healthcheck；本機 `psql -h localhost` 連線通過；持久化以「寫入標記列 → `down` → `up -d` → 查回」驗證，並以 `down -v` 反向實驗對照（volume 被刪、資料蒸發、重跑 initdb），確認 `down` 與 `down -v` 的差異 |
-| T0.4 | GCP 專案 + Drive API OAuth 憑證 | Python 腳本能列出並下載自有 Drive 檔案 |
+| T0.4 | GCP 專案 + Drive API OAuth 憑證 | ✅ 已完成（2026-07-27）：沿用既有 GCP 專案（Console 新版 UI 為 Google Auth Platform，Audience 分頁設定 External + test user）；OAuth client（Desktop app）下載 `credentials.json`；`ingestion/drive_client.py` 四個 TODO 由 kun 填完、我 review 修正（SCOPES 改為單一 `drive.readonly`——原本 `drive.file`+`drive.metadata.readonly` 組合看不到既有檔案且無下載權限；`get_credentials` 清掉授權後多餘的 `raise NotImplementedError`）；`list_files`/`download_file` 皆驗證通過（實際列出並下載 Drive 檔案） |
 | T0.5 | 髒資料產生器 v1：參考藍本 schema（訂單、應收帳款、客戶），生成多租戶 CSV；髒資料注入可設比例（缺值/重複/格式漂移/遲到） | 指定 5% 髒資料率時，實際輸出可驗證吻合；檔案上傳至 Drive |
 | T0.6 | WSL 原生環境內 Node.js/npm + Claude Code CLI 可執行（T0.1/T0.2 建置當時漏列，直到搬遷個人設定才發現 `claude: command not found`） | ✅ 已完成（2026-07-19）：`node -v`/`npm -v`/`claude --version` 皆正常（僅互動 shell 下如此——非互動 shell 因 `~/.bashrc` 開頭的 interactive guard 看不到 nvm，屬正常現象非 bug）；個人 CLAUDE.md/playbooks/6 個本地 skills 已從 Windows 側搬遷；5 個個人 plugin marketplace 全數重新啟用 |
 

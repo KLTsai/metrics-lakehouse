@@ -10,12 +10,9 @@ from googleapiclient.http import MediaIoBaseDownload
 CREDENTIALS_PATH = "credentials.json"
 TOKEN_PATH = "token.json"
 
-# TODO(kun): 對照你在「三個為什麼」Q2 的討論，這裡該填 read-only 還是
-# read-write 的 scope？(https://developers.google.com/drive/api/guides/api-specific-auth)
-SCOPES = [""]
+SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
-# TODO(kun): 填你在 GCP Console 步驟 6 建的資料夾 ID。
-FOLDER_ID = ""
+FOLDER_ID = "1uPwb7gFdMZrMBwxQrndwueZ5xkJycFTK"
 
 
 def get_credentials() -> Credentials:
@@ -28,9 +25,8 @@ def get_credentials() -> Credentials:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # TODO(kun): 用 InstalledAppFlow.from_client_secrets_file(...) 建立 flow，
-            # 再呼叫 flow.run_local_server(port=0) 跳出瀏覽器完成授權。
-            raise NotImplementedError
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            creds = flow.run_local_server(port=0)
 
         with open(TOKEN_PATH, "w") as token_file:
             token_file.write(creds.to_json())
@@ -40,16 +36,19 @@ def get_credentials() -> Credentials:
 
 def list_files(service, folder_id: str) -> list[dict]:
     """Return [{id, name}, ...] for files directly inside folder_id."""
-    # TODO(kun): 用 service.files().list(q=..., fields=...) 查詢，
-    # q 要用 "'<folder_id>' in parents" 把範圍鎖在這個資料夾。
-    raise NotImplementedError
+    results = service.files().list(q=f"'{folder_id}' in parents", fields="files(id, name)").execute()
+    return results.get("files", [])
 
 
 def download_file(service, file_id: str, destination: str) -> None:
     """Download file_id to destination on local disk."""
-    # TODO(kun): 用 service.files().get_media(fileId=file_id) 搭配
-    # MediaIoBaseDownload 分段寫入 destination。
-    raise NotImplementedError
+    request = service.files().get_media(fileId=file_id)
+
+    with open(destination, "wb") as f:
+        downloader = MediaIoBaseDownload(f, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
 
 
 def main():
