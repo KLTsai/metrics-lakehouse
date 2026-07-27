@@ -226,6 +226,9 @@ token.json
 *.pem
 *.key
 
+# macOS
+.DS_Store
+
 # Airflow
 airflow.cfg
 airflow-webserver.pid
