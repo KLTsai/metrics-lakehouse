@@ -237,3 +237,6 @@ airflow-webserver.pid
 target/
 dbt_packages/
 .user.yml
+
+# Node（sandcastle 編排器依賴）
+node_modules/
