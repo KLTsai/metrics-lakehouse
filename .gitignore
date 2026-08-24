@@ -218,6 +218,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 # ---- metrics-lakehouse 專案專屬（secrets 與工具產物）----
+generator/out/
 credentials.json
 token.json
 *.pem
