@@ -54,7 +54,7 @@ TRANSACTION_DETAIL = Table(
         Field("quantity", "銷售量", DECIMAL, required=True),
         Field("exchange_rate", "匯率", DECIMAL),
         Field("currency_code", "金額單位", STRING),
-        Field("actual_price_ex_tax", "實際售價(未稅)", DECIMAL),
+        Field("actual_price_ex_tax", "實際售價（未稅）", DECIMAL),
         Field("tax_rate", "稅率", DECIMAL),
         Field("remark", "備註說明", STRING),
     ),
