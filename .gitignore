@@ -238,3 +238,6 @@ dbt_packages/
 
 # Node（sandcastle 編排器依賴）
 node_modules/
+
+# Lavish review artifacts (local review surfaces, not deliverables)
+.lavish/
