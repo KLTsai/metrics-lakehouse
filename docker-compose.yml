@@ -19,8 +19,12 @@ x-airflow-common:
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    SERVICE_ACCOUNT_KEY_PATH: /opt/airflow/service-account-key.json
   volumes:
     - ./airflow/dags:/opt/airflow/dags
+    - ./ingestion:/opt/airflow/dags/ingestion
+    - ./service-account-key.json:/opt/airflow/service-account-key.json:ro
+    - ./landing:/opt/airflow/landing
     - airflow_logs:/opt/airflow/logs
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
@@ -115,8 +119,8 @@ services:
     command:
       - -c
       - |
-        mkdir -p /opt/airflow/logs /opt/airflow/dags
-        chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/logs /opt/airflow/dags
+        mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/landing
+        chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/logs /opt/airflow/dags /opt/airflow/landing
         exec /entrypoint airflow version
     environment:
       <<: *airflow-common-env

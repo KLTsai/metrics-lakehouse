@@ -221,8 +221,10 @@ __marimo__/
 generator/out/
 credentials.json
 token.json
+service-account-key.json
 *.pem
 *.key
+landing/
 
 # macOS
 .DS_Store
