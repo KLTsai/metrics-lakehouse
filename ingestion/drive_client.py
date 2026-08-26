@@ -12,7 +12,7 @@ TOKEN_PATH = "token.json"
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
-FOLDER_ID = "1uPwb7gFdMZrMBwxQrndwueZ5xkJycFTK"
+FOLDER_ID = "1DgrZIkA2Pis-sYz_2v3BDj4I0YOk75xh"  # 我的雲端硬碟/lakehouse/landing
 
 
 def get_credentials() -> Credentials:
