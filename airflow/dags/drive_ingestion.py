@@ -1,5 +1,5 @@
-"""T1.2/T1.3 — 從 Drive landing 資料夾把 logical_date 那天的檔案下載到本機分區,
-再過驗票口(表頭比對契約)才算這天的 ingestion 完成。
+"""T1.2/T1.3/T1.4 — 從 Drive landing 資料夾把 logical_date 那天的檔案下載到本機分區,
+過驗票口(表頭比對契約),再入倉(分區替換寫進 Postgres raw 區)。
 
 依 CONTEXT.md 約定:logical_date = D 的 run,負責檔案日 = D 的檔案。
 landing 底下是租戶子資料夾(alpha/beta),list_files() 只列直接子項,要逐租戶列。
@@ -10,6 +10,7 @@ import csv
 import os
 
 import pendulum
+import psycopg2
 from airflow.sdk import DAG, task
 from googleapiclient.discovery import build
 
@@ -23,10 +24,17 @@ from ingestion.drive_client import (
     resolve_tenant_folders,
 )
 from ingestion.header_validator import validate_header
+from ingestion.raw_loader import create_table_sql, load_partition
 
 TENANTS = ["alpha", "beta"]
 TABLES = ["transaction_detail", "accounts_receivable"]
 LANDING_DIR = "/opt/airflow/landing"
+WAREHOUSE_HOST = "postgres-warehouse"  # compose service 名;帳密走 .env 的 POSTGRES_*
+
+
+def landing_csv_path(tenant: str, table_name: str, file_date: str) -> str:
+    """landing 分區內單一檔案的路徑:{LANDING_DIR}/{租戶}/{檔案日}/{表}_{檔案日}.csv。"""
+    return os.path.join(LANDING_DIR, tenant, file_date, f"{table_name}_{file_date}.csv")
 
 @task
 def download_day(logical_date=None) -> None:
@@ -69,20 +77,49 @@ def validate_headers(logical_date=None) -> None:
     for tenant in TENANTS:
         for table_name in TABLES:
             table = SCHEMA_TABLES[table_name]
-            path = os.path.join(
-                LANDING_DIR, tenant, file_date, f"{table_name}_{file_date}.csv"
-            )
+            path = landing_csv_path(tenant, table_name, file_date)
             with open(path, encoding="utf-8-sig", newline="") as fh:
                 header = next(csv.reader(fh))
             validate_header(table, header)
 
 
+@task
+def load_day(logical_date=None) -> None:
+    """入倉(T1.4):驗過票的 4 檔寫進 raw 區,每檔一次分區替換(ADR 0002)。
+
+    DDL 冪等(IF NOT EXISTS),每次跑先確保 schema/表存在;之後逐 (租戶, 表)
+    呼叫 load_partition——刪整格再插整檔、同一交易,重跑或中途被 kill 都不會
+    讓倉庫偏離「乾淨跑一次」的結果。
+    """
+    file_date = logical_date.to_date_string()
+    conn = psycopg2.connect(
+        host=WAREHOUSE_HOST,
+        dbname=os.environ["POSTGRES_DB"],
+        user=os.environ["POSTGRES_USER"],
+        password=os.environ["POSTGRES_PASSWORD"],
+    )
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                for table_name in TABLES:
+                    cur.execute(create_table_sql(SCHEMA_TABLES[table_name]))
+        for tenant in TENANTS:
+            for table_name in TABLES:
+                path = landing_csv_path(tenant, table_name, file_date)
+                n_rows = load_partition(
+                    conn, SCHEMA_TABLES[table_name], path, tenant, file_date
+                )
+                print(f"raw.{table_name} ← {tenant}/{file_date}:{n_rows} 列")
+    finally:
+        conn.close()
+
+
 with DAG(
     dag_id="drive_ingestion",
-    description="Drive landing → 本機分區 → 驗票(T1.2/T1.3)",
+    description="Drive landing → 本機分區 → 驗票 → raw 入倉(T1.2/T1.3/T1.4)",
     schedule=None,  # 手動觸發;catchup/backfill 排程屬 T1.5(D3:2026-01-01~01-05 資料窗口)
     start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
     catchup=False,
-    tags=["t1.2", "t1.3", "ingestion"],
+    tags=["t1.2", "t1.3", "t1.4", "ingestion"],
 ) as dag:
-    download_day() >> validate_headers()
+    download_day() >> validate_headers() >> load_day()
