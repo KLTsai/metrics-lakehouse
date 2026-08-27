@@ -1,16 +1,19 @@
-"""T1.2 — 從 Drive landing 資料夾把 logical_date 那天的檔案下載到本機分區。
+"""T1.2/T1.3 — 從 Drive landing 資料夾把 logical_date 那天的檔案下載到本機分區,
+再過驗票口(表頭比對契約)才算這天的 ingestion 完成。
 
 依 CONTEXT.md 約定:logical_date = D 的 run,負責檔案日 = D 的檔案。
 landing 底下是租戶子資料夾(alpha/beta),list_files() 只列直接子項,要逐租戶列。
 """
 from __future__ import annotations
 
+import csv
 import os
 
 import pendulum
 from airflow.sdk import DAG, task
 from googleapiclient.discovery import build
 
+from generator.schema import TABLES as SCHEMA_TABLES
 from ingestion.drive_client import (
     FOLDER_ID,
     download_file,
@@ -19,11 +22,11 @@ from ingestion.drive_client import (
     list_files,
     resolve_tenant_folders,
 )
+from ingestion.header_validator import validate_header
 
 TENANTS = ["alpha", "beta"]
 TABLES = ["transaction_detail", "accounts_receivable"]
 LANDING_DIR = "/opt/airflow/landing"
-
 
 @task
 def download_day(logical_date=None) -> None:
@@ -54,12 +57,32 @@ def download_day(logical_date=None) -> None:
         download_file(service, file_id, os.path.join(dest_dir, filename))
 
 
+@task
+def validate_headers(logical_date=None) -> None:
+    """驗票口:逐檔表頭比對契約(generator/schema.py),對不上就讓 task 失敗
+    ——連帶讓整個 run 失敗,不安靜跳過(對應藍本 silently-drop 事故,見 CONTEXT.md)。
+
+    只看表頭欄位名稱,不看值:值的怪樣式(中文日期、千分位)屬欄位值漂移,
+    是 T2.4 dbt test 的責任,這一關故意放行。
+    """
+    file_date = logical_date.to_date_string()
+    for tenant in TENANTS:
+        for table_name in TABLES:
+            table = SCHEMA_TABLES[table_name]
+            path = os.path.join(
+                LANDING_DIR, tenant, file_date, f"{table_name}_{file_date}.csv"
+            )
+            with open(path, encoding="utf-8-sig", newline="") as fh:
+                header = next(csv.reader(fh))
+            validate_header(table, header)
+
+
 with DAG(
     dag_id="drive_ingestion",
-    description="Drive landing → 本機分區(T1.2)",
+    description="Drive landing → 本機分區 → 驗票(T1.2/T1.3)",
     schedule=None,  # 手動觸發;catchup/backfill 排程屬 T1.5(D3:2026-01-01~01-05 資料窗口)
     start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
     catchup=False,
-    tags=["t1.2", "ingestion"],
+    tags=["t1.2", "t1.3", "ingestion"],
 ) as dag:
-    download_day()
+    download_day() >> validate_headers()

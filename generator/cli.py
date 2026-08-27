@@ -11,6 +11,15 @@ from pathlib import Path
 from generator.generate import Rates, generate_all
 
 
+def _header_drift(value: str) -> tuple[str, str, str]:
+    parts = value.split(":", 2)
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError(
+            "--header-drift 格式須為 table:field_en:new_name_zh"
+        )
+    return tuple(parts)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="generator", description="合成資料產生器(T0.5)"
@@ -27,6 +36,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--duplicate-rate", type=float, default=0.05)
     parser.add_argument("--drift-rate", type=float, default=0.05)
     parser.add_argument("--late-rate", type=float, default=0.05)
+    parser.add_argument(
+        "--header-drift",
+        type=_header_drift,
+        default=None,
+        help="單欄表頭改名,模擬欄位名稱漂移,格式 table:field_en:new_name_zh(T1.3 驗票用)",
+    )
     args = parser.parse_args(argv)
 
     written = generate_all(
@@ -42,5 +57,6 @@ def main(argv: list[str] | None = None) -> None:
             drift=args.drift_rate,
             late=args.late_rate,
         ),
+        header_drift=args.header_drift,
     )
     print(f"寫出 {len(written)} 個檔案 → {args.out}")

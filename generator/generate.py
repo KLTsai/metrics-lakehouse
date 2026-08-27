@@ -143,11 +143,27 @@ def generate_tenant_table(
     return by_batch
 
 
-def _write_csv(path: Path, table: Table, rows: list[dict]) -> None:
+def _header_row(table: Table, header_drift: tuple[str, str, str] | None) -> list[str]:
+    if header_drift is not None:
+        drift_table, drift_field, new_name = header_drift
+        if table.name == drift_table:
+            return [
+                new_name if f.name_en == drift_field else f.name_zh
+                for f in table.fields
+            ]
+    return [f.name_zh for f in table.fields]
+
+
+def _write_csv(
+    path: Path,
+    table: Table,
+    rows: list[dict],
+    header_drift: tuple[str, str, str] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.writer(fh)
-        writer.writerow([f.name_zh for f in table.fields])
+        writer.writerow(_header_row(table, header_drift))
         for row in rows:
             writer.writerow([row[f.name_en] for f in table.fields])
 
@@ -160,8 +176,23 @@ def generate_all(
     start_date: date,
     seed: int,
     rates: Rates,
+    header_drift: tuple[str, str, str] | None = None,
 ) -> list[Path]:
-    """生成全部租戶兩張表的批次 CSV,回傳寫出的檔案路徑。"""
+    """生成全部租戶兩張表的批次 CSV,回傳寫出的檔案路徑。
+
+    header_drift = (table_name, field_name_en, new_name_zh):單欄表頭改名,
+    模擬 T1.3 要擋下的欄位名稱漂移(藍本真實事故:上游改欄名,舊系統安靜丟欄)。
+    只改表頭那一行,資料列與其他表不受影響。
+    """
+    if header_drift is not None:
+        drift_table, drift_field, _ = header_drift
+        if drift_table not in TABLES:
+            raise ValueError(f"--header-drift 的 table 不在契約裡:{drift_table}")
+        if drift_field not in {f.name_en for f in TABLES[drift_table].fields}:
+            raise ValueError(
+                f"--header-drift 的 field 不在 {drift_table} 契約裡:{drift_field}"
+            )
+
     out_dir = Path(out_dir)
     batch_dates = [start_date + timedelta(days=i) for i in range(batches)]
     written = []
@@ -173,6 +204,6 @@ def generate_all(
             )
             for batch_date, batch_rows in by_batch.items():
                 path = out_dir / tenant / f"{table.name}_{batch_date.isoformat()}.csv"
-                _write_csv(path, table, batch_rows)
+                _write_csv(path, table, batch_rows, header_drift)
                 written.append(path)
     return written

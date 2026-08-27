@@ -177,6 +177,116 @@ def test_output_layout_and_bom(out_dir):
                 assert path.read_bytes()[:3] == b"\xef\xbb\xbf"
 
 
+def test_header_drift_renames_target_column_only(tmp_path):
+    """T1.3 驗票用:--header-drift 只改指定表的指定欄表頭,資料本體與其他表不受影響。"""
+    kwargs = dict(
+        tenants=["alpha"],
+        rows=20,
+        batches=2,
+        start_date=START,
+        seed=7,
+        rates=Rates(missing=RATE, duplicate=RATE, drift=RATE, late=RATE),
+    )
+    clean, drifted = tmp_path / "clean", tmp_path / "drifted"
+    generate_all(out_dir=clean, **kwargs)
+    generate_all(
+        out_dir=drifted,
+        header_drift=("transaction_detail", "customer_id", "客戶代碼"),
+        **kwargs,
+    )
+    order_table = TABLES["transaction_detail"]
+    ar_table = TABLES["accounts_receivable"]
+
+    def _path(base, table):
+        return next((base / "alpha").glob(f"{table.name}_*.csv"))
+
+    def _header(base, table):
+        with _path(base, table).open(encoding="utf-8-sig", newline="") as fh:
+            return next(csv.reader(fh))
+
+    clean_header = _header(clean, order_table)
+    drift_header = _header(drifted, order_table)
+    idx = [f.name_en for f in order_table.fields].index("customer_id")
+    expected = list(clean_header)
+    expected[idx] = "客戶代碼"
+    assert drift_header == expected
+
+    # 沒被指定的那張表不受影響
+    assert _header(clean, ar_table) == _header(drifted, ar_table)
+
+    # 資料列本體(表頭以外的所有行)不受影響,只有表頭那一行變了
+    clean_body = _path(clean, order_table).read_bytes().split(b"\n", 1)[1]
+    drift_body = _path(drifted, order_table).read_bytes().split(b"\n", 1)[1]
+    assert clean_body == drift_body
+
+
+def test_header_drift_same_seed_byte_identical(tmp_path):
+    """加 --header-drift 不破壞「同 seed 重跑 byte-identical」的性質。"""
+    kwargs = dict(
+        tenants=["alpha"],
+        rows=20,
+        batches=2,
+        start_date=START,
+        seed=7,
+        rates=Rates(missing=RATE, duplicate=RATE, drift=RATE, late=RATE),
+        header_drift=("accounts_receivable", "customer_name", "客戶名稱2"),
+    )
+    a, b = tmp_path / "a", tmp_path / "b"
+    generate_all(out_dir=a, **kwargs)
+    generate_all(out_dir=b, **kwargs)
+    files_a = sorted(p.relative_to(a) for p in a.rglob("*.csv"))
+    files_b = sorted(p.relative_to(b) for p in b.rglob("*.csv"))
+    assert files_a == files_b and files_a
+    for rel in files_a:
+        assert (a / rel).read_bytes() == (b / rel).read_bytes(), rel
+
+
+def test_header_drift_rejects_unknown_table_or_field(tmp_path):
+    base_kwargs = dict(
+        out_dir=tmp_path,
+        tenants=["alpha"],
+        rows=5,
+        batches=1,
+        start_date=START,
+        seed=1,
+        rates=Rates(missing=RATE, duplicate=RATE, drift=RATE, late=RATE),
+    )
+    with pytest.raises(ValueError):
+        generate_all(header_drift=("no_such_table", "x", "y"), **base_kwargs)
+    with pytest.raises(ValueError):
+        generate_all(
+            header_drift=("transaction_detail", "no_such_field", "y"), **base_kwargs
+        )
+
+
+def test_cli_header_drift(tmp_path):
+    from generator.cli import main
+
+    main(
+        [
+            "--out",
+            str(tmp_path),
+            "--tenants",
+            "t1",
+            "--rows",
+            "10",
+            "--batches",
+            "1",
+            "--start-date",
+            "2026-02-01",
+            "--seed",
+            "9",
+            "--header-drift",
+            "transaction_detail:customer_id:客戶代碼",
+        ]
+    )
+    path = tmp_path / "t1" / "transaction_detail_2026-02-01.csv"
+    with path.open(encoding="utf-8-sig", newline="") as fh:
+        header = next(csv.reader(fh))
+    assert "客戶代碼" in header
+    assert "客戶編號" not in header
+
+
 def test_cli_smoke(tmp_path):
     from generator.cli import main
 

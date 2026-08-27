@@ -23,6 +23,7 @@ x-airflow-common:
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./ingestion:/opt/airflow/dags/ingestion
+    - ./generator:/opt/airflow/dags/generator
     - ./service-account-key.json:/opt/airflow/service-account-key.json:ro
     - ./landing:/opt/airflow/landing
     - airflow_logs:/opt/airflow/logs
