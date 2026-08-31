@@ -1,0 +1,14 @@
+# 連線設定跟著 repo 走(不放 ~/.dbt/);憑證一律走環境變數,不落檔。
+# 跑法:cd dbt && source ../.env && uv run dbt <command>
+metrics_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      user: "{{ env_var('POSTGRES_USER', 'warehouse') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'metrics') }}"
+      schema: staging
+      threads: 4

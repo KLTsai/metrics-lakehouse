@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      入倉層(T1.4 分區替換寫入,設計見 docs/adr/0002)。上游資料欄全 text、
+      刻意保留重複列與缺值;metadata 四欄(tenant_id/file_date/source_filename/loaded_at)
+      由 loader 自填、帶型別、可信。
+    schema: raw
+    tables:
+      - name: transaction_detail
+        description: 訂單明細(契約 generator/schema.py TRANSACTION_DETAIL,16 資料欄)。
+      - name: accounts_receivable
+        description: 應收帳款(契約 generator/schema.py ACCOUNTS_RECEIVABLE,13 資料欄)。

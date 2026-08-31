@@ -1,0 +1,17 @@
+name: metrics_lakehouse
+version: "1.0.0"
+
+profile: metrics_lakehouse
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+
+target-path: target
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  metrics_lakehouse:
+    staging:
+      +materialized: view
