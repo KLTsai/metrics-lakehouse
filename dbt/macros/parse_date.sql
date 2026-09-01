@@ -1,7 +1,7 @@
 {#
   raw text → date 的守門轉型。漂移樣式以 generator/dirty.py 的 _drift_datetime 為準:
   chinese_date(2026年1月2日)與 dot_date(2026.1.2)標準化後轉型,其餘 → NULL。
-  regex 只守形狀不驗曆法(2026-02-30 會過 regex、在 cast 時報錯)——上游是產生器
+  regex 只守形狀不驗曆法(2026-02-30 會過 regex、在 cast 時報錯,整個 view 的查詢會失敗而非該格變 NULL)——上游是產生器
   契約、只產合法日期;真要防曆法錯值得上 DB 端 UDF,議題 A 裁示不走那條路。
 #}
 {% macro parse_date(column) %}
