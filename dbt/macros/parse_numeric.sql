@@ -1,7 +1,7 @@
 {#
   raw text → numeric 的守門轉型(議題 A 裁示)。順序:逐樣式 regex 先對原值守門,
   認得的才剝符號轉型,一種都認不得的轉 NULL。順序不可反(先剝符號再守門會把 1.331,67 讀成 1.33167)。
-  漂移樣式清單以 generator/dirty.py 的 _DECIMAL_STYLES 為準;
+  欄位值漂移樣式清單以 generator/dirty.py 的 _DECIMAL_STYLES 為準;
   percent(279%)語意不明(÷100 與否依欄位而異)、NaN 非數值,兩者刻意不救,落 else → NULL。
 #}
 {% macro parse_numeric(column) %}
