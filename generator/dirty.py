@@ -8,7 +8,7 @@
 
 注入目標互斥,四條驗證斷言才能同時精確成立:
 - 缺值只打 missing_pool(不含主鍵);漂移避開已缺值的儲存格
-- 重複與遲到由 generate.py 挑列時排除彼此與被注入的列
+- 重複列由 generate.py 挑列時排除已被缺值/漂移注入的列與遲到列;遲到列在注入前先挑,可與缺值/漂移重疊——這是預期行為,遲到的判定走主鍵而非日期欄(見 ADR 0001)
 
 漂移樣式抄藍本實戰分類器(health/checker.py:201-213 的 reason 常數):
 數值 currency/acct_neg/percent/chinese_unit/space_thousand/nan_inf/european,

@@ -1,9 +1,9 @@
 """乾淨資料合成、髒資料編排與 CSV 輸出。
 
 輸出:out_dir/{tenant_id}/{table}_{YYYY-MM-DD}.csv,UTF-8 with BOM
-(藍本 loader 用 utf-8-sig 讀)。批次 = 連續日,檔名日期即批次日期。
+(藍本 loader 用 utf-8-sig 讀)。一個檔案日一個檔案,檔名日期即該檔的檔案日。
 
-主鍵內嵌批次日期(ORD-{tenant}-{YYYYMMDD}-{seq} / AR-{tenant}-{YYYYMMDD}-{seq}),
+主鍵內嵌歸屬日(ORD-{tenant}-{YYYYMMDD}-{seq} / AR-{tenant}-{YYYYMMDD}-{seq}),
 遲到列的判定走主鍵而非日期欄——日期欄可能被缺值/漂移注入命中,主鍵保證不被注入。
 
 決定性:每個 (seed, tenant, table) 派生一顆 random.Random(字串 seeding 不經
