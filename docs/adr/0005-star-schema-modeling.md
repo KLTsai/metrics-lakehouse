@@ -22,6 +22,67 @@ Phase 2 的 dbt 建模層(T2.2)把 staging 的兩張表拆成星型結構:交易
 
 **檔案日**(`file_date`)留在兩張 fact 上,但不接 dim_date。它只回答「這列搭哪天的檔進來」,用途是對帳與重載,不是報表的角度。
 
+```mermaid
+erDiagram
+    dim_date ||--o{ fact_transaction : "商機開放日"
+    dim_date ||--o{ fact_transaction : "商機關閉日"
+    dim_date ||--o{ fact_ar : "發票日"
+    dim_date ||--o{ fact_ar : "到期日"
+    dim_date ||--o{ fact_ar : "實際入帳日"
+    dim_date ||--o{ fact_ar : "預計入帳日"
+    dim_customer ||--o{ fact_transaction : "客戶"
+    dim_ar_customer ||--o{ fact_ar : "客戶"
+
+    fact_transaction {
+        string order_id PK
+        string customer_id
+        string product_id
+        string channel
+        string area
+        string sales_re_name
+        string status
+        date opportunity_opened_at
+        date closed_at
+        decimal quantity
+        decimal actual_price_ex_tax
+        string tenant_id
+    }
+
+    fact_ar {
+        string document_no PK
+        string customer_id
+        date invoice_date
+        date due_date
+        date actual_collection_date
+        date expected_collection_date
+        decimal original_amount
+        decimal received_amount
+        string payment_status
+        string tenant_id
+    }
+
+    dim_date {
+        date date_day PK
+        int year
+        int quarter
+        int month
+        int day_of_week
+    }
+
+    dim_customer {
+        string tenant_id PK
+        string customer_id PK
+    }
+
+    dim_ar_customer {
+        string tenant_id PK
+        string customer_id PK
+        string customer_name
+    }
+```
+
+六條線指向同一張 `dim_date`,每條線標角色(role-playing dimension);兩張客戶 dim 各自只接自己的 fact,不互通(見下一節)。
+
 ## 為什麼是兩張客戶 dim,不是一張
 
 交易明細的客戶編號長 `CUST000005`(40 個值、沒名稱),應收帳款的客戶代碼長 `C00001`(8 個值、有名稱),兩邊沒有任何一個值相同。這不是產生器偷懶:藍本本身沒有客戶主檔,102 支 SQL 沒有一支把兩張表按客戶 join,兩套代號是藍本上傳格式的實況,而 ADR 0001 定了「產生器逐欄照抄藍本的上傳格式,不為模型好看去改」。
